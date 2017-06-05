@@ -5,36 +5,85 @@ import os.path
 block_freelist=[]
 inode_freelist=[]
 inode_list=[]
+inode_num_list=[]
+
+class Superblock:
+    def __init__(self, num_blocks, num_inodes,block_size, inode_size,block_per_group, i_node_per_group, first_free_inode):
+        self.num_blocks = num_blocks
+        self.num_inodes = num_inodes
+        self.block_size = block_size
+        self.inode_size = inode_size
+        self.block_per_group = block_per_group
+        self.i_node_per_group = i_node_per_group
+        self.first_free_inode = first_free_inode
+
+class Inode:
+    def __init__ (self, inode_number, file_type, mode,link_count,num_blocks, block_pointers):
+        self.m_inode_num = inode_number
+        self.m_file_type = file_type
+        self.m_mode = mode
+        self.m_link_count = link_count
+        self.m_num_blocks = num_blocks
+        self.m_block_pointers = block_pointers # 15 pointers to data blocks
+
+
+#    def __str__(self):
+        #return "Inode Number: %s, File Type: %s, Mode: %s, Link Count: %s a is %s, b is %s" % (self.a, self.b)
+
+superblock = Superblock(0,0,0,0,0,0,0)
+
+def ifDataBlock(block_num):
+    if block_num < 0  or block_num > superblock.num_blocks:
+        # TODO: ask if 0 is invalid or reserved
+        return False
+
+    if block_num in block_freelist:
+        return False
+
+    return True
+
+def ifReservedBlock(block_num):
+    # TODO
+    return True
 
 def block_consistency_audits(row):
     print("checking for block consistency...")
 
+    for inode in inode_list:
+
+        for i in range(0,11):
+            # check if invalid
+            if not ifDataBlock(inode.m_block_pointers[i]):
+                print("INVALID BLOCK {0} IN INODE {1} AT OFFSET".format(inode.m_block_pointers[i], inode.m_inode_num, i))
+
+        for i in range(12,14):
+            if not ifDataBlock(inode.m_block_pointers[i]):
+                print("INVALID INDIRECT BLOCK {0} IN INODE {1} AT OFFSET".format(inode.m_block_pointers[i], inode.m_inode_num, i))
+
+
+
+
 def inode_allocation_audits():
     print("checking for inode allocations...")
+    # loop through inode
 
-    # check for inodes on FREELIST but have links
-    # loop through indoes on FREELIST; save in temp list
-    # loop through to see if any have links > 0
 
-    for free_inode in inode_freelist: # loop through all of free inodes
-        for inode in inode_list: # compare with inodes on list
-            if free_inode == inode[1]: # if inode from summary is on free list
-                # check for link number
-                link_count = inode[6] # check to see if link count is 0
-                if link_count > 0:
-                    # allocated inode on freelist
-                    print("ALLOCATED INODE {0} ON FREELIST".format(inode[1]))
+    for i in range(superblock.first_free_inode,  superblock.i_node_per_group):
+        # check if inode is on freelist
+        if i in inode_freelist:
+            # check if has a summary entry in inode list
+            # TODO: check if inode on summary means not free (without checking link count)
+            if i in inode_num_list:
+                #if inode.m_link_count > 0:
+                print("ALLOCATED INODE {0} ON FREELIST".format(i))
 
-    # look for unallocated inodes NOT on the freelist
-    for inode in inode_list:
-        inode_number = inode[1]
-        link_count = inode[6]
-        if link_count == 0 and inode_number not in inode_freelist:
-            print("UNALLOCATED INODE {0} NOT ON FREELIST".format(inode_number))
 
-                # discrepency
+        else: # if i is not on the freelist
+            # check if it is on summary list (it should)
+            if i not in inode_num_list:
+                #if inode.m_link_count == 0:
+                print("UNALLOCATED INODE {0} NOT ON FREELIST".format(i))
 
-    # check for inodes with 0 links but not on FREELIST
 
 def directory_consistency_audits(row):
     print("checking for directory consistency")
@@ -64,14 +113,17 @@ def main():
 
         # convert ints in rows
         if row[0] == 'INODE':
-            for i, field in enumerate(row):
-                #print row[i]
-                if i == 1:
-                    row[i]=int(row[i])
-                elif i >=3 and i <=6:
-                    row[i]=int(row[i])
-                elif i >=10:
-                    row[i]=int(row[i])
+            inode_list.append(Inode(int(row[1]),row[2], int(row[3]), int(row[6]),int(row[11]), map(int, row[12:26])))
+            inode_num_list.append(int(row[1]))
+
+        if row[0] == 'SUPERBLOCK':
+            superblock.num_blocks = int(row[1])
+            superblock.num_inodes = int(row[2])
+            superblock.block_size = int(row[3])
+            superblock.inode_size = int(row[4])
+            superblock.block_per_group= int(row[5])
+            superblock.i_node_per_group= int(row[6])
+            superblock.first_free_inode= int(row[7])
 
 
         # fill in block freelist
@@ -82,22 +134,12 @@ def main():
         if row[0] == 'IFREE':
             inode_freelist.append(int(row[1]))
 
-        # inodes
-        if row[0] == 'INODE':
-            inode_list.append(row)
-
-
-
-    #print block_freelist
-    print inode_freelist
-    #print inode_list
 
 
     block_consistency_audits(row)
-
     inode_allocation_audits()
 
-    directory_consistency_audits(row)
+    #directory_consistency_audits(row)
 
     f.close()
 
