@@ -210,21 +210,21 @@ def directory_consistency_audits():
     #check link consistancy
     for inode in inode_list:
         if inode.m_link_count != link_count_list[inode.m_inode_num]:
-            print ("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}".format(inode.m_inode_num,link_count_list[inode.m_inode_num],inode.m_link_count))
+            sys.stdout.write ("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}".format(inode.m_inode_num,link_count_list[inode.m_inode_num],inode.m_link_count))
 
     #check parent child consistency 
     #check if current directory points to itself
     for dirent in dirent_list:
         if dirent.m_name == "'.'": 
             if dirent.m_parent != dirent.m_inode_number:
-                print ("DIRECTORY INODE {0} NAME '.' LINK TO INODE {1} SHOULD BE {1}".format(dirent.m_parent,dirent.m_inode_number))
+                sys.stdout.write ("DIRECTORY INODE {0} NAME '.' LINK TO INODE {1} SHOULD BE {1}".format(dirent.m_parent,dirent.m_inode_number))
 
     #print parent_inode_list
     
     for dirent in dirent_list:
         if dirent.m_name == "'..'":
             if dirent.m_inode_number != parent_inode_list[dirent.m_parent]:
-                print("DIRECTORY INODE {0} NAME '..' LINK TO INODE {1} SHOULD BE {2}".format(dirent.m_parent,dirent.m_inode_number, parent_inode_list[dirent.m_parent]))
+                sys.stdout.write("DIRECTORY INODE {0} NAME '..' LINK TO INODE {1} SHOULD BE {2}".format(dirent.m_parent,dirent.m_inode_number, parent_inode_list[dirent.m_parent]))
 
 def main():
 
