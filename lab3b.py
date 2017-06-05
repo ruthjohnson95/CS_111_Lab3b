@@ -9,6 +9,13 @@ inode_num_list=[]
 indirect_list = []
 allocated_list = []
 
+single_offset = 12
+double_offset = 268
+triple_offset = 65804
+
+
+level = ["BLOCK","INDIRECT" , "DOUBLE INDIRECT", "TRIPPLE INDIRECT"]
+
 class Superblock:
     def __init__(self, num_blocks, num_inodes,block_size, inode_size,block_per_group, i_node_per_group, first_free_inode):
         self.num_blocks = num_blocks
@@ -63,9 +70,11 @@ def ifReservedBlock(block_num):
 def block_consistency_audits(row):
     print("checking for block consistency...")
 
-    for inode in inode_list:
+    block_list = [0] * (superblock.num_blocks +1)
 
-        for i in range(0,11):
+    for inode in inode_list:
+        #print (inode.m_inode_num)
+        for i in range(0,12): # NOTE: not inclusive range
             # check if invalid
             block_num = inode.m_block_pointers[i]
             if not ifDataBlock(block_num):
@@ -74,15 +83,32 @@ def block_consistency_audits(row):
             if ifReservedBlock(block_num):
                 print("RESERVED BLOCK {0} IN INODE {1} AT OFFSET {2}".format(inode.m_block_pointers[i], inode.m_inode_num, i))
 
-        for i in range(12,14):
+        for i in range(12,15):
             # TODO: change offset for indirect blocks
+            #print i
+            #print inode.m_block_pointers[i]
             if not ifDataBlock(inode.m_block_pointers[i]):
-                print("INVALID INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(inode.m_block_pointers[i], inode.m_inode_num, i))
+                # indirect
+                if i == 12:
+                    print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
+                if i == 13:
+                    print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
+                if i == 14:
+                    print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
+
+
+
+#                print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-12],inode.m_block_pointers[i], inode.m_inode_num, i))
 
             if ifReservedBlock(block_num):
-                print("RESERVED INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(inode.m_block_pointers[i], inode.m_inode_num, i))
+                if i == 12:
+                    print("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
+                if i == 13:
+                    print("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
+                if i == 14:
+                    print("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
 
-    for i in range(8, superblock.num_blocks):
+    for i in range(8, superblock.num_blocks ):
         # if not on the free list and not in the allocated list
         if (i not in block_freelist) and (i not in allocated_list):
             # unfreferenced
@@ -91,12 +117,35 @@ def block_consistency_audits(row):
         elif(i in block_freelist) and (i in allocated_list):
             print("ALLOCATED BLOCK {0} ON FREELIST".format(i))
 
-        elif(i in allocated_list) and (i not in block_freelist):
+    for j in range (0, len(allocated_list)):
+        if (allocated_list[j] not in block_freelist):
             # check number of times referenced
-            block_list = [0] * (superblock.num_blocks +1)
-            block_list[i] = block_list[i] + 1
+            block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
 
+    print block_list
+    for i in range(8,superblock.num_blocks+1):
 
+        if block_list[i] > 1:
+            # find the duplicates
+            # loop through inodes
+            for inode in inode_list:
+                # direct
+                for j in range(0,12):
+                    if inode.m_block_pointers[j] == i:
+                        print("DUPLICATE BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, j))
+                # indirect
+                if inode.m_block_pointers[12] == i:
+                    print("DUPLICATE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, single_offset))
+                if inode.m_block_pointers[13] == i:
+                    print("DUPLICATE DOUBLE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, double_offset))
+                if inode.m_block_pointers[14] == i:
+                    print("DUPLICATE TRIPPLE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, triple_offset))
+
+            # loop through indirect list
+            for indirect in indirect_list:
+                if i == indirect.m_block_num:
+                    # it's a duplicates
+                    print("DUPLICATE {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[indirect.m_level], i, inode.m_inode_num, indirect.m_block_offset))
 
 
 
@@ -151,8 +200,8 @@ def main():
 
         # convert ints in rows
         if row[0] == 'INODE':
-            inode_list.append(Inode(int(row[1]),row[2], int(row[3]), int(row[6]),int(row[11]), map(int, row[12:26])))
-            for i in range(12,26):
+            inode_list.append(Inode(int(row[1]),row[2], int(row[3]), int(row[6]),int(row[11]), map(int, row[12:27])))
+            for i in range(12,27):
                 allocated_list.append(int(row[i]))
 
             inode_num_list.append(int(row[1]))
@@ -182,6 +231,7 @@ def main():
 
     block_consistency_audits(row)
     inode_allocation_audits()
+    #print allocated_list
 
     #directory_consistency_audits(row)
 
