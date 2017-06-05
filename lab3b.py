@@ -8,6 +8,8 @@ inode_list=[]
 inode_num_list=[]
 indirect_list = []
 allocated_list = []
+dirent_list = []
+
 
 single_offset = 12
 double_offset = 268
@@ -43,6 +45,11 @@ class Indirect:
         self.m_parent = int(parent)
         self.m_block_num = int(block_num)
 
+class Dirent:
+    def __init__ (self, parent, inode_number,name):
+        self.m_parent = int(parent)
+        self.m_inode_number = int(inode_number)
+        self.m_name = name
 #    def __str__(self):
         #return "Inode Number: %s, File Type: %s, Mode: %s, Link Count: %s a is %s, b is %s" % (self.a, self.b)
 
@@ -67,7 +74,20 @@ def ifReservedBlock(block_num):
     else:
         return False
 
-def block_consistency_audits(row):
+def isValidInode (inode_num):
+    if inode_num in range(0, superblock.i_node_per_group+1):
+        return True
+    return False
+
+def isAllocatedInode (inode_num):
+    for inode in inode_list:
+        if (inode.m_inode_num == inode_num):
+            if (inode.m_mode > 0) and (inode.m_link_count > 0):
+                return True
+            return False
+    return False
+
+def block_consistency_audits():
     print("checking for block consistency...")
 
     block_list = [0] * (superblock.num_blocks +1)
@@ -98,7 +118,7 @@ def block_consistency_audits(row):
 
 
 
-#                print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-12],inode.m_block_pointers[i], inode.m_inode_num, i))
+    # print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-12],inode.m_block_pointers[i], inode.m_inode_num, i))
 
             if ifReservedBlock(block_num):
                 if i == 12:
@@ -122,7 +142,7 @@ def block_consistency_audits(row):
             # check number of times referenced
             block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
 
-    print block_list
+    #print block_list
     for i in range(8,superblock.num_blocks+1):
 
         if block_list[i] > 1:
@@ -147,9 +167,6 @@ def block_consistency_audits(row):
                     # it's a duplicates
                     print("DUPLICATE {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[indirect.m_level], i, inode.m_inode_num, indirect.m_block_offset))
 
-
-
-
 def inode_allocation_audits():
     print("checking for inode allocations...")
     # loop through inode
@@ -171,9 +188,23 @@ def inode_allocation_audits():
                 #if inode.m_link_count == 0:
                 print("UNALLOCATED INODE {0} NOT ON FREELIST".format(i))
 
-
-def directory_consistency_audits(row):
+def directory_consistency_audits():
     print("checking for directory consistency")
+    link_count_list = [0] * (superblock.num_inodes +1)
+    #loop through each dirent object
+    for dirent in dirent_list:
+        #check if the referenced inode is valid 
+        if not (isValidInode(dirent.m_inode_number)):
+            print ("DIRECTORY INODE {0} NAME {1} INVALID INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
+        elif not (isAllocatedInode (dirent.m_inode_number)):
+            print ("DIRECTORY INODE {0} NAME {1}} UNALLOCATED INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
+        else:
+            link_count_list[dirent.m_inode_number] = link_count_list[dirent.m_inode_number] +1
+
+    for inode in inode_list:
+        if inode.m_link_count != link_count_list[inode.m_inode_num]:
+            print ("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}".format(inode.m_inode_num,inode.m_link_count,link_count_list[inode.m_inode_num]))
+
 
 def main():
 
@@ -227,13 +258,16 @@ def main():
         if row[0] == 'IFREE':
             inode_freelist.append(int(row[1]))
 
+        if row[0] == "DIRENT":
+            dirent_list.append(Dirent(int(row[1]), int(row[3]), row[6]))
 
 
-    block_consistency_audits(row)
+
+    block_consistency_audits()
     inode_allocation_audits()
     #print allocated_list
 
-    #directory_consistency_audits(row)
+    directory_consistency_audits()
 
     f.close()
 
