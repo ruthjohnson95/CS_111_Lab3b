@@ -197,13 +197,13 @@ def directory_consistency_audits():
         if not (isValidInode(dirent.m_inode_number)):
             print ("DIRECTORY INODE {0} NAME {1} INVALID INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
         elif not (isAllocatedInode (dirent.m_inode_number)):
-            print ("DIRECTORY INODE {0} NAME {1}} UNALLOCATED INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
+            print ("DIRECTORY INODE {0} NAME {1} UNALLOCATED INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
         else:
             link_count_list[dirent.m_inode_number] = link_count_list[dirent.m_inode_number] +1
 
     for inode in inode_list:
         if inode.m_link_count != link_count_list[inode.m_inode_num]:
-            print ("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}".format(inode.m_inode_num,inode.m_link_count,link_count_list[inode.m_inode_num]))
+            print ("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}".format(inode.m_inode_num,link_count_list[inode.m_inode_num],inode.m_link_count))
 
 
 def main():
