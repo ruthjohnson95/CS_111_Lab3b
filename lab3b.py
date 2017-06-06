@@ -17,6 +17,7 @@ single_offset = 12
 double_offset = 268
 triple_offset = 65804
 
+FIRST_NON_RESERVED_BLOCK = 8
 
 level = ["BLOCK","INDIRECT" , "DOUBLE INDIRECT", "TRIPPLE INDIRECT"]
 
@@ -59,16 +60,12 @@ def ifDataBlock(block_num):
     if block_num < 0  or block_num > superblock.num_blocks:
         # TODO: ask if 0 is invalid or reserved
         return False
-
-#    if block_num in block_freelist:
-#        return False
-
     else:
         return True
 
 def ifReservedBlock(block_num):
     # TODO check range with TA
-    if block_num < 8 and block_num > 0:
+    if block_num < FIRST_NON_RESERVED_BLOCK and block_num > 0: #CALCULATE OFFSET
         return True
     #elif block_num not in block_freelist and block_num > 0  and block_num < superblock.num_blocks:
     #    return True
@@ -94,11 +91,9 @@ def block_consistency_audits():
     block_list = [0] * (superblock.num_blocks +1)
 
     for inode in inode_list:
-        #print (inode.m_inode_num)
-#        print(inode.m_block_pointers)
+
         for i in range(0,12): # NOTE: not inclusive range
             # check if invalid
-#            print block_num 
             if not ifDataBlock(inode.m_block_pointers[i]):
                 sys.stdout.write("INVALID BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(inode.m_block_pointers[i], inode.m_inode_num, i))
 
@@ -130,7 +125,7 @@ def block_consistency_audits():
                 if i == 14:
                     sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
 
-    for i in range(8, superblock.num_blocks ):
+    for i in range(FIRST_NON_RESERVED_BLOCK, superblock.num_blocks ):
         # if not on the free list and not in the allocated list
         if (i not in block_freelist) and (i not in allocated_list):
             # unfreferenced
@@ -147,8 +142,7 @@ def block_consistency_audits():
                 block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
 
     #print block_list
-    for i in range(8,superblock.num_blocks+1):
-
+    for i in range(FIRST_NON_RESERVED_BLOCK,superblock.num_blocks+1):
         if block_list[i] > 1:
             # find the duplicates
             # loop through inodes
@@ -183,7 +177,6 @@ def inode_allocation_audits():
                 #if inode.m_link_count > 0:
                 sys.stdout.write("ALLOCATED INODE {0} ON FREELIST\n".format(i))
 
-
         else: # if i is not on the freelist
             # check if it is on summary list (it should)
             if i not in inode_num_list and i >= superblock.first_free_inode:
@@ -194,10 +187,7 @@ def directory_consistency_audits():
     #print("checking for directory consistency")
     link_count_list = [0] * (superblock.num_inodes +1)
     parent_inode_list = [0] * (superblock.num_inodes +1) #index is the referenced inode number and the stored value is the parent inode number
-
-    #TODO: CHECK IF NEED THIS STEP. IF NOT REFERENCED DO WE ASSUME IT LINKS TO ITSELF
-    for i in range (0,superblock.num_inodes +1):
-        parent_inode_list[i] = i
+    parent_inode_list[2] = 2
 
     #loop through each dirent object
     for dirent in dirent_list:
@@ -221,7 +211,7 @@ def directory_consistency_audits():
     for dirent in dirent_list:
         if dirent.m_name == "'.'":
             if dirent.m_parent != dirent.m_inode_number:
-                sys.stdout.write("DIRECTORY INODE {0} NAME '.' LINK TO INODE {1} SHOULD BE {1}\n".format(dirent.m_parent,dirent.m_inode_number))
+                sys.stdout.write("DIRECTORY INODE {0} NAME '.' LINK TO INODE {1} SHOULD BE {0}\n".format(dirent.m_parent,dirent.m_inode_number))
 
     #print parent_inode_list
 
@@ -284,9 +274,14 @@ def main():
 
         if row[0] == "DIRENT":
             dirent_list.append(Dirent(int(row[1]), int(row[3]), row[6]))
+        
+        if row[0] == "GROUP":
+            total_inode_number = int (row[3])
+            first_inode_block = int (row[8])
 
 
-
+    FIRST_NON_RESERVED_BLOCK = first_inode_block + (superblock.inode_size * total_inode_number/superblock.block_size)
+    
     block_consistency_audits()
     inode_allocation_audits()
 
