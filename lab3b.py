@@ -56,8 +56,8 @@ class Dirent:
 
 superblock = Superblock(0,0,0,0,0,0,0)
 
-def ifDataBlock(block_num):
-    if block_num < 0  or block_num > superblock.num_blocks:
+def ifDataBlock(block_num): # if 100 blcoks, blcok number is 1-99
+    if block_num < 0  or block_num >= superblock.num_blocks:
         # TODO: ask if 0 is invalid or reserved
         return False
     else:
@@ -71,9 +71,9 @@ def ifReservedBlock(block_num):
     #    return True
     else:
         return False
-
-def isValidInode (inode_num):
-    if inode_num in range(0, superblock.i_node_per_group+1):
+ 
+def isValidInode (inode_num): # if 25 inode, then inode number
+    if inode_num in range(1, superblock.i_node_per_group+1):
         return True
     return False
 
@@ -142,6 +142,7 @@ def block_consistency_audits():
                 block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
 
     #print block_list
+
     for i in range(FIRST_NON_RESERVED_BLOCK,superblock.num_blocks+1):
         if block_list[i] > 1:
             # find the duplicates
