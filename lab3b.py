@@ -60,10 +60,11 @@ def ifDataBlock(block_num):
         # TODO: ask if 0 is invalid or reserved
         return False
 
-    if block_num in block_freelist:
-        return False
+#    if block_num in block_freelist:
+#        return False
 
-    return True
+    else:
+        return True
 
 def ifReservedBlock(block_num):
     # TODO check range with TA
@@ -94,14 +95,15 @@ def block_consistency_audits():
 
     for inode in inode_list:
         #print (inode.m_inode_num)
+#        print(inode.m_block_pointers)
         for i in range(0,12): # NOTE: not inclusive range
             # check if invalid
-            block_num = inode.m_block_pointers[i]
-            if not ifDataBlock(block_num):
-                sys.stdout.write("INVALID BLOCK {0} IN INODE {1} AT OFFSET {2}".format(inode.m_block_pointers[i], inode.m_inode_num, i))
+#            print block_num 
+            if not ifDataBlock(inode.m_block_pointers[i]):
+                sys.stdout.write("INVALID BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(inode.m_block_pointers[i], inode.m_inode_num, i))
 
-            if ifReservedBlock(block_num):
-                sys.stdout.write ("RESERVED BLOCK {0} IN INODE {1} AT OFFSET {2}".format(inode.m_block_pointers[i], inode.m_inode_num, i))
+            if ifReservedBlock(inode.m_block_pointers[i]):
+                sys.stdout.write ("RESERVED BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(inode.m_block_pointers[i], inode.m_inode_num, i))
 
         for i in range(12,15):
             # TODO: change offset for indirect blocks
@@ -110,37 +112,39 @@ def block_consistency_audits():
             if not ifDataBlock(inode.m_block_pointers[i]):
                 # indirect
                 if i == 12:
-                    sys.stdout.write("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
+                    sys.stdout.write("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
                 if i == 13:
-                    sys.stdout.write("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
+                    sys.stdout.write("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
                 if i == 14:
-                    sys.stdout.write("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
+                    sys.stdout.write("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
 
 
 
     # print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-12],inode.m_block_pointers[i], inode.m_inode_num, i))
 
-            if ifReservedBlock(block_num):
+            if ifReservedBlock(inode.m_block_pointers[i]):
                 if i == 12:
-                    sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
+                    sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
                 if i == 13:
-                    sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
+                    sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
                 if i == 14:
-                    sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
+                    sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
 
     for i in range(8, superblock.num_blocks ):
         # if not on the free list and not in the allocated list
         if (i not in block_freelist) and (i not in allocated_list):
             # unfreferenced
-            sys.stdout.write("UNREFERENCED BLOCK {0}".format(i))
+            sys.stdout.write("UNREFERENCED BLOCK {0}\n".format(i))
 
         elif(i in block_freelist) and (i in allocated_list):
-            sys.stdout.write("ALLOCATED BLOCK {0} ON FREELIST".format(i))
+            sys.stdout.write("ALLOCATED BLOCK {0} ON FREELIST\n".format(i))
 
-    for j in range (0, len(allocated_list)):
+    for j in range (0, len(allocated_list)-1):
         if (allocated_list[j] not in block_freelist):
             # check number of times referenced
-            block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
+            if ifDataBlock(allocated_list[j]):
+                # TODO: can it be reserved? 
+                block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
 
     #print block_list
     for i in range(8,superblock.num_blocks+1):
@@ -152,41 +156,39 @@ def block_consistency_audits():
                 # direct
                 for j in range(0,12):
                     if inode.m_block_pointers[j] == i:
-                        sys.stdout.write("DUPLICATE BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, j))
+                        sys.stdout.write("DUPLICATE BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(i, inode.m_inode_num, j))
                 # indirect
                 if inode.m_block_pointers[12] == i:
-                    sys.stdout.write("DUPLICATE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, single_offset))
+                    sys.stdout.write("DUPLICATE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(i, inode.m_inode_num, single_offset))
                 if inode.m_block_pointers[13] == i:
-                    sys.stdout.write("DUPLICATE DOUBLE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, double_offset))
+                    sys.stdout.write("DUPLICATE DOUBLE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(i, inode.m_inode_num, double_offset))
                 if inode.m_block_pointers[14] == i:
-                    sys.stdout.write("DUPLICATE TRIPPLE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}".format(i, inode.m_inode_num, triple_offset))
+                    sys.stdout.write("DUPLICATE TRIPPLE INDIRECT BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(i, inode.m_inode_num, triple_offset))
 
             # loop through indirect list
             for indirect in indirect_list:
                 if i == indirect.m_block_num:
                     # it's a duplicates
-                    sys.stdout.write("DUPLICATE {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[indirect.m_level], i, inode.m_inode_num, indirect.m_block_offset))
+                    sys.stdout.write("DUPLICATE {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[indirect.m_level], i, inode.m_inode_num, indirect.m_block_offset))
 
 def inode_allocation_audits():
     #print("checking for inode allocations...")
     # loop through inode
-
-
-    for i in range(superblock.first_free_inode,  superblock.i_node_per_group):
+    for i in range(1,  superblock.i_node_per_group):
         # check if inode is on freelist
         if i in inode_freelist:
             # check if has a summary entry in inode list
             # TODO: check if inode on summary means not free (without checking link count)
             if i in inode_num_list:
                 #if inode.m_link_count > 0:
-                sys.stdout.write("ALLOCATED INODE {0} ON FREELIST".format(i))
+                sys.stdout.write("ALLOCATED INODE {0} ON FREELIST\n".format(i))
 
 
         else: # if i is not on the freelist
             # check if it is on summary list (it should)
-            if i not in inode_num_list:
+            if i not in inode_num_list and i >= superblock.first_free_inode:
                 #if inode.m_link_count == 0:
-                sys.stdout.write("UNALLOCATED INODE {0} NOT ON FREELIST".format(i))
+                sys.stdout.write("UNALLOCATED INODE {0} NOT ON FREELIST\n".format(i))
 
 def directory_consistency_audits():
     #print("checking for directory consistency")
@@ -201,9 +203,9 @@ def directory_consistency_audits():
     for dirent in dirent_list:
         #check if the referenced inode is valid
         if not (isValidInode(dirent.m_inode_number)):
-            sys.stdout.write("DIRECTORY INODE {0} NAME {1} INVALID INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
+            sys.stdout.write("DIRECTORY INODE {0} NAME {1} INVALID INODE {2}\n".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
         elif not (isAllocatedInode (dirent.m_inode_number)):
-            sys.stdout.write("DIRECTORY INODE {0} NAME {1} UNALLOCATED INODE {2}".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
+            sys.stdout.write("DIRECTORY INODE {0} NAME {1} UNALLOCATED INODE {2}\n".format(dirent.m_parent,dirent.m_name,dirent.m_inode_number))
         else:
             link_count_list[dirent.m_inode_number] = link_count_list[dirent.m_inode_number] +1
 
@@ -212,21 +214,21 @@ def directory_consistency_audits():
     #check link consistancy
     for inode in inode_list:
         if inode.m_link_count != link_count_list[inode.m_inode_num]:
-            sys.stdout.write("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}".format(inode.m_inode_num,link_count_list[inode.m_inode_num], inode.m_link_count))
+            sys.stdout.write("INODE {0} HAS {1} LINKS BUT LINKCOUNT IS {2}\n".format(inode.m_inode_num,link_count_list[inode.m_inode_num], inode.m_link_count))
 
     #check parent child consistency
     #check if current directory points to itself
     for dirent in dirent_list:
         if dirent.m_name == "'.'":
             if dirent.m_parent != dirent.m_inode_number:
-                sys.stdout.write("DIRECTORY INODE {0} NAME '.' LINK TO INODE {1} SHOULD BE {1}".format(dirent.m_parent,dirent.m_inode_number))
+                sys.stdout.write("DIRECTORY INODE {0} NAME '.' LINK TO INODE {1} SHOULD BE {1}\n".format(dirent.m_parent,dirent.m_inode_number))
 
     #print parent_inode_list
 
     for dirent in dirent_list:
         if dirent.m_name == "'..'":
             if dirent.m_inode_number != parent_inode_list[dirent.m_parent]:
-                sys.stdout.write("DIRECTORY INODE {0} NAME '..' LINK TO INODE {1} SHOULD BE {2}".format(dirent.m_parent,dirent.m_inode_number, parent_inode_list[dirent.m_parent]))
+                sys.stdout.write("DIRECTORY INODE {0} NAME '..' LINK TO INODE {1} SHOULD BE {2}\n".format(dirent.m_parent,dirent.m_inode_number, parent_inode_list[dirent.m_parent]))
 
 def main():
 
