@@ -63,8 +63,7 @@ def ifDataBlock(block_num):
 #    if block_num in block_freelist:
 #        return False
 
-    else:
-        return True
+    return True
 
 def ifReservedBlock(block_num):
     # TODO check range with TA
@@ -95,14 +94,13 @@ def block_consistency_audits():
 
     for inode in inode_list:
         #print (inode.m_inode_num)
-#        print(inode.m_block_pointers)
         for i in range(0,12): # NOTE: not inclusive range
             # check if invalid
-#            print block_num 
-            if not ifDataBlock(inode.m_block_pointers[i]):
+            block_num = inode.m_block_pointers[i]
+            if not ifDataBlock(block_num):
                 sys.stdout.write("INVALID BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(inode.m_block_pointers[i], inode.m_inode_num, i))
 
-            if ifReservedBlock(inode.m_block_pointers[i]):
+            if ifReservedBlock(block_num):
                 sys.stdout.write ("RESERVED BLOCK {0} IN INODE {1} AT OFFSET {2}\n".format(inode.m_block_pointers[i], inode.m_inode_num, i))
 
         for i in range(12,15):
@@ -122,7 +120,7 @@ def block_consistency_audits():
 
     # print("INVALID {0} BLOCK {1} IN INODE {2} AT OFFSET {3}".format(level[i-12],inode.m_block_pointers[i], inode.m_inode_num, i))
 
-            if ifReservedBlock(inode.m_block_pointers[i]):
+            if ifReservedBlock(block_num):
                 if i == 12:
                     sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, single_offset))
                 if i == 13:
@@ -139,12 +137,10 @@ def block_consistency_audits():
         elif(i in block_freelist) and (i in allocated_list):
             sys.stdout.write("ALLOCATED BLOCK {0} ON FREELIST\n".format(i))
 
-    for j in range (0, len(allocated_list)-1):
+    for j in range (0, len(allocated_list)):
         if (allocated_list[j] not in block_freelist):
             # check number of times referenced
-            if ifDataBlock(allocated_list[j]):
-                # TODO: can it be reserved? 
-                block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
+            block_list[allocated_list[j]] = block_list[allocated_list[j]] + 1
 
     #print block_list
     for i in range(8,superblock.num_blocks+1):
@@ -174,7 +170,9 @@ def block_consistency_audits():
 def inode_allocation_audits():
     #print("checking for inode allocations...")
     # loop through inode
-    for i in range(1,  superblock.i_node_per_group):
+
+
+    for i in range(superblock.first_free_inode,  superblock.i_node_per_group):
         # check if inode is on freelist
         if i in inode_freelist:
             # check if has a summary entry in inode list
@@ -186,7 +184,7 @@ def inode_allocation_audits():
 
         else: # if i is not on the freelist
             # check if it is on summary list (it should)
-            if i not in inode_num_list and i >= superblock.first_free_inode:
+            if i not in inode_num_list:
                 #if inode.m_link_count == 0:
                 sys.stdout.write("UNALLOCATED INODE {0} NOT ON FREELIST\n".format(i))
 
