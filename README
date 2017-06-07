@@ -5,19 +5,27 @@
 Partner: Emily Chen (304682182)
 
 Files:
-lab3a.c - source code with implementations for file system summary
-ext2_fs.h - header file that defines the format of the EXT2 file system
-Makefile - creates an executable with default target; makes a tarball using 'dist' target
-README - this file
+
+lab3b.py - python file that checks error in csv summary 
+It takes one parameter — csv file and check if the content is consistent. It will prints out all the inconsistency 
+
+Lab3b -- a shell script that runs the python file
+
+Makefile 
+Default: creates an executable with default target
+Dist: makes a tarball
+clean: clean the tar file if created 
+
+
+README: this file
+
 
 Resources:
+
 Disc 1b slides
 
 http://www.nongnu.org/ext2-doc/ext2.html
 
-http://man7.org/linux/man-pages/man2/pread.2.html
-
-http://man7.org/linux/man-pages/man8/debugfs.8.html
 
 Misc Notes:
-1 late days
+2 late days
