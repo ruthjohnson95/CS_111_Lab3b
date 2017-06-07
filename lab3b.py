@@ -9,7 +9,7 @@ inode_freelist=[]
 inode_list=[]
 inode_num_list=[]
 indirect_list = []
-allocated_list = []
+allocated_list = [] # all the block number appeared in summary
 dirent_list = []
 
 
@@ -57,6 +57,7 @@ class Dirent:
 superblock = Superblock(0,0,0,0,0,0,0)
 
 def ifDataBlock(block_num): # if 100 blcoks, blcok number is 1-99
+#TODO: CHECK THIS WHY IS IT NOT 1
     if block_num < 0  or block_num >= superblock.num_blocks:
         # TODO: ask if 0 is invalid or reserved
         return False
@@ -134,7 +135,8 @@ def block_consistency_audits():
         elif(i in block_freelist) and (i in allocated_list):
             sys.stdout.write("ALLOCATED BLOCK {0} ON FREELIST\n".format(i))
 
-    for j in range (0, len(allocated_list)-1):
+    #go through all block number in csv summary 
+    for j in range (0, len(allocated_list)):
         if (allocated_list[j] not in block_freelist):
             # check number of times referenced
             if ifDataBlock(allocated_list[j]):
@@ -143,7 +145,7 @@ def block_consistency_audits():
 
     #print block_list
 
-    for i in range(FIRST_NON_RESERVED_BLOCK,superblock.num_blocks+1):
+    for i in range(FIRST_NON_RESERVED_BLOCK,superblock.num_blocks):
         if block_list[i] > 1:
             # find the duplicates
             # loop through inodes
