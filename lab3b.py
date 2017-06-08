@@ -18,6 +18,7 @@ double_offset = 268
 triple_offset = 65804
 
 FIRST_NON_RESERVED_BLOCK = 8
+first_inode_block = 0
 
 level = ["BLOCK","INDIRECT" , "DOUBLE INDIRECT", "TRIPPLE INDIRECT"]
 
@@ -88,7 +89,7 @@ def isAllocatedInode (inode_num):
 
 def block_consistency_audits():
     #print("checking for block consistency...")
-
+    FIRST_NON_RESERVED_BLOCK = first_inode_block + (superblock.inode_size * superblock.num_inodes/superblock.block_size)
     block_list = [0] * (superblock.num_blocks +1)
 
     for inode in inode_list:
@@ -125,6 +126,7 @@ def block_consistency_audits():
                     sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, double_offset))
                 if i == 14:
                     sys.stdout.write("RESERVED {0} BLOCK {1} IN INODE {2} AT OFFSET {3}\n".format(level[i-11],inode.m_block_pointers[i], inode.m_inode_num, triple_offset))
+
 
     for i in range(FIRST_NON_RESERVED_BLOCK, superblock.num_blocks ):
         # if not on the free list and not in the allocated list
@@ -279,12 +281,13 @@ def main():
             dirent_list.append(Dirent(int(row[1]), int(row[3]), row[6]))
         
         if row[0] == "GROUP":
-            total_inode_number = int (row[3])
+            global first_inode_block
             first_inode_block = int (row[8])
 
 
-    FIRST_NON_RESERVED_BLOCK = first_inode_block + (superblock.inode_size * total_inode_number/superblock.block_size)
+    FIRST_NON_RESERVED_BLOCK = first_inode_block + (superblock.inode_size * superblock.num_inodes/superblock.block_size)
     
+
     block_consistency_audits()
     inode_allocation_audits()
 
